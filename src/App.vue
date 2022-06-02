@@ -6,15 +6,15 @@
       <input
         type="text"
         placeholder="Search for an anime..."
-        v-model="query"
+        v-model="state.query"
         @input="handleInput"
       />
       <button type="submit" class="button">Search</button>
     </form>
 
-    <div class="results" v-if="search_results.length > 0">
+    <div class="results" v-if="state.search_results.length > 0">
       <div
-        v-for="(anime, index) in search_results"
+        v-for="(anime, index) in state.search_results"
         v-bind:key="{ index }"
         class="result"
       >
@@ -32,10 +32,10 @@
       </div>
     </div>
 
-    <div class="myanime" v-if="my_anime.length > 0">
+    <div class="myanime" v-if="state.my_anime.length > 0">
       <h2>My Anime</h2>
       <div
-        v-for="(anime, index) in my_anime_asc"
+        v-for="(anime, index) in state.my_anime"
         v-bind:key="{ index }"
         class="anime"
       >
@@ -64,52 +64,70 @@
   </main>
 </template>
 
-<script setup>
-import { ref, onMounted, computed } from "vue";
-const query = ref("");
-const my_anime = ref([]);
-const search_results = ref([]);
-const my_anime_asc = computed(() => {
-  return my_anime.value.sort((a, b) => {
-    return a.title.localeCompare(b.title);
-  });
-});
-const searchAnime = () => {
-  const url = `https://api.jikan.moe/v4/anime?q=${query.value}`;
-  fetch(url)
-    .then((res) => res.json())
-    .then((data) => {
-      search_results.value = data.data;
+<script>
+import { reactive, onMounted } from "vue";
+
+export default {
+  setup() {
+    const state = reactive({
+      query: "",
+      my_anime: [],
+      search_results: [],
     });
+
+    const searchAnime = () => {
+      const url = `https://api.jikan.moe/v4/anime?q=${state.query}`;
+      fetch(url)
+        .then((res) => res.json())
+        .then((data) => {
+          state.search_results = data.data;
+        });
+    };
+
+    const handleInput = (e) => {
+      if (!e.target.value) {
+        state.search_results = [];
+      }
+    };
+
+    const addAnime = (anime) => {
+      state.search_results = [];
+      state.query = "";
+      state.my_anime.push({
+        id: anime.mal_id,
+        title: anime.title,
+        image: anime.images.jpg.image_url,
+        total_episodes: anime.episodes,
+        watched_episodes: 0,
+      });
+      localStorage.setItem("my_anime", JSON.stringify(state.my_anime));
+    };
+
+    const increaseWatch = (anime) => {
+      anime.watched_episodes++;
+      localStorage.setItem("my_anime", JSON.stringify(state.my_anime));
+    };
+
+    const decreaseWatch = (anime) => {
+      anime.watched_episodes--;
+      localStorage.setItem("my_anime", JSON.stringify(state.my_anime));
+    };
+
+    onMounted(() => {
+      state.my_anime = JSON.parse(localStorage.getItem("my_anime")) || [];
+    });
+
+    // Return template data
+    return {
+      state,
+      searchAnime,
+      handleInput,
+      addAnime,
+      increaseWatch,
+      decreaseWatch,
+    };
+  },
 };
-const handleInput = (e) => {
-  if (!e.target.value) {
-    search_results.value = [];
-  }
-};
-const addAnime = (anime) => {
-  search_results.value = [];
-  query.value = "";
-  my_anime.value.push({
-    id: anime.mal_id,
-    title: anime.title,
-    image: anime.images.jpg.image_url,
-    total_episodes: anime.episodes,
-    watched_episodes: 0,
-  });
-  localStorage.setItem("my_anime", JSON.stringify(my_anime.value));
-};
-const increaseWatch = (anime) => {
-  anime.watched_episodes++;
-  localStorage.setItem("my_anime", JSON.stringify(my_anime.value));
-};
-const decreaseWatch = (anime) => {
-  anime.watched_episodes--;
-  localStorage.setItem("my_anime", JSON.stringify(my_anime.value));
-};
-onMounted(() => {
-  my_anime.value = JSON.parse(localStorage.getItem("my_anime")) || [];
-});
 </script>
 
 <style>
