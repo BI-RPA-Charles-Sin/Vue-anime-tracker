@@ -75,6 +75,7 @@ export default {
       search_results: [],
     });
 
+    // Functional Programming
     const searchAnime = () => {
       const url = `https://api.jikan.moe/v4/anime?q=${state.query}`;
       fetch(url)
@@ -113,6 +114,7 @@ export default {
       localStorage.setItem("my_anime", JSON.stringify(state.my_anime));
     };
 
+    // Before Render
     onMounted(() => {
       state.my_anime = JSON.parse(localStorage.getItem("my_anime")) || [];
     });
