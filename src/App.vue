@@ -1,83 +1,45 @@
 <template>
   <main>
-    <h1>My Anime Tracker</h1>
+    <Header />
 
-    <form @submit.prevent="searchAnime">
-      <input
-        type="text"
-        placeholder="Search for an anime..."
-        v-model="state.query"
-        @input="handleInput"
-      />
-      <button type="submit" class="button">Search</button>
-    </form>
+    <Form :state="state" @search-Anime="SearchAnime" />
 
-    <div class="results" v-if="state.search_results.length > 0">
-      <div
-        v-for="(anime, index) in state.search_results"
-        v-bind:key="{ index }"
-        class="result"
-      >
-        <img :src="anime.images.jpg.image_url" />
-        <div class="details">
-          <h3>{{ anime.title }}</h3>
-          <p :title="anime.synopsis" v-if="anime.synopsis">
-            {{ anime.synopsis.slice(0, 120) }}...
-          </p>
-          <span class="flex-1"></span>
-          <button @click="addAnime(anime)" class="button">
-            Add to My Anime
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="myanime" v-if="state.my_anime.length > 0">
-      <h2>My Anime</h2>
-      <div
-        v-for="(anime, index) in state.my_anime"
-        v-bind:key="{ index }"
-        class="anime"
-      >
-        <img :src="anime.image" />
-        <h3>{{ anime.title }}</h3>
-        <div class="flex-1"></div>
-        <span class="episodes"
-          >{{ anime.watched_episodes }} / {{ anime.total_episodes }}</span
-        >
-        <button
-          v-if="anime.total_episodes !== anime.watched_episodes"
-          @click="increaseWatch(anime)"
-          class="button"
-        >
-          +
-        </button>
-        <button
-          v-if="anime.watched_episodes > 0"
-          @click="decreaseWatch(anime)"
-          class="button"
-        >
-          -
-        </button>
-      </div>
+    <div class="results" v-if="state.search_results.length != 0">
+      <ResultList :data="state.results" type="result" />
     </div>
   </main>
 </template>
 
 <script>
-import { reactive, onMounted } from "vue";
+import { reactive, onMounted, computed } from "vue";
+import Header from "./components/Header";
+import Form from "./components/Form";
+import ResultList from "./components/ResultList";
 
 export default {
+  components: {
+    Header,
+    Form,
+    ResultList,
+  },
+
   setup() {
     const state = reactive({
-      query: "",
       my_anime: [],
       search_results: [],
+
+      anime: computed(() => {
+        return state.my_anime;
+      }),
+
+      results: computed(() => {
+        return state.search_results;
+      }),
     });
 
     // Functional Programming
-    const searchAnime = () => {
-      const url = `https://api.jikan.moe/v4/anime?q=${state.query}`;
+    const SearchAnime = (obj) => {
+      const url = `https://api.jikan.moe/v4/anime?q=${obj.querys}`;
       fetch(url)
         .then((res) => res.json())
         .then((data) => {
@@ -91,29 +53,6 @@ export default {
       }
     };
 
-    const addAnime = (anime) => {
-      state.search_results = [];
-      state.query = "";
-      state.my_anime.push({
-        id: anime.mal_id,
-        title: anime.title,
-        image: anime.images.jpg.image_url,
-        total_episodes: anime.episodes,
-        watched_episodes: 0,
-      });
-      localStorage.setItem("my_anime", JSON.stringify(state.my_anime));
-    };
-
-    const increaseWatch = (anime) => {
-      anime.watched_episodes++;
-      localStorage.setItem("my_anime", JSON.stringify(state.my_anime));
-    };
-
-    const decreaseWatch = (anime) => {
-      anime.watched_episodes--;
-      localStorage.setItem("my_anime", JSON.stringify(state.my_anime));
-    };
-
     // Before Render
     onMounted(() => {
       state.my_anime = JSON.parse(localStorage.getItem("my_anime")) || [];
@@ -121,12 +60,12 @@ export default {
 
     // Return template data
     return {
+      Header,
+      Form,
+      ResultList,
       state,
-      searchAnime,
+      SearchAnime,
       handleInput,
-      addAnime,
-      increaseWatch,
-      decreaseWatch,
     };
   },
 };
@@ -151,42 +90,9 @@ h1 {
   text-align: center;
   margin-bottom: 1.5rem;
 }
-form {
-  display: flex;
-  max-width: 480px;
-  margin: 0 auto 1.5rem;
-}
-form input {
-  appearance: none;
-  outline: none;
-  border: none;
-  background: white;
-  display: block;
-  color: #888;
-  font-size: 1.125rem;
-  padding: 0.5rem 1rem;
-  width: 100%;
-}
-.button {
-  appearance: none;
-  outline: none;
-  border: none;
-  background: none;
-  cursor: pointer;
-  display: block;
-  padding: 0.5rem 1rem;
-  background-image: linear-gradient(to right, deeppink 50%, darkviolet 50%);
-  background-size: 200%;
-  color: white;
-  font-size: 1.125rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  transition: 0.4s;
-}
-.button:hover {
-  background-position: right;
-}
+
 .results {
+  list-style: none;
   background-color: #fff;
   border-radius: 0.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -233,6 +139,9 @@ form input {
   font-weight: 400;
   margin-bottom: 1.5rem;
 }
+.myanime {
+  list-style: none;
+}
 .myanime .anime {
   display: flex;
   align-items: center;
@@ -262,5 +171,24 @@ form input {
 }
 .anime .button:last-of-type {
   margin-right: 0;
+}
+.button {
+  appearance: none;
+  outline: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: block;
+  padding: 0.5rem 1rem;
+  background-image: linear-gradient(to right, deeppink 50%, darkviolet 50%);
+  background-size: 200%;
+  color: white;
+  font-size: 1.125rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  transition: 0.4s;
+}
+.button:hover {
+  background-position: right;
 }
 </style>
